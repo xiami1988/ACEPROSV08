@@ -15,17 +15,17 @@ class Panel(ScreenPanel):
         self.ace_status = {}
         self.slot_inventory = []
         self.dryer_enabled = False
-        self.current_loaded_slot = -1  # Cache the loaded slot
-        self.numpad_visible = False  # Track numpad state
-        self.endless_spool_enabled = False  # Track endless spool status
+        self.current_loaded_slot = -1  # 缓存已加载的料盘
+        self.numpad_visible = False  # 跟踪数字键盘状态
+        self.endless_spool_enabled = False  # 跟踪自动续料状态
         
-        # Initialize slot components lists
+        # 初始化料盘组件列表
         self.slot_boxes = []
         self.slot_labels = []
         self.slot_color_boxes = []
         self.slot_buttons = []
         
-        # Store actual slot data for configuration screen
+        # 存储配置界面的实际料盘数据
         self.slot_data = [
             {"material": "PLA", "color": [255, 255, 255], "temp": 200, "status": "empty"},
             {"material": "PLA", "color": [255, 255, 255], "temp": 200, "status": "empty"},
@@ -33,27 +33,27 @@ class Panel(ScreenPanel):
             {"material": "PLA", "color": [255, 255, 255], "temp": 200, "status": "empty"}
         ]
         
-        # Create main screen layout
+        # 创建主屏幕布局
         self.create_main_screen()
         
-        # Add custom CSS for rounded boxes and color indicators
+        # 添加自定义 CSS 用于圆角框和颜色指示器
         self.add_custom_css()
         
-        # Subscribe to saved_variables updates
+        # 订阅 saved_variables 更新
         if hasattr(self._screen.printer, 'klippy') and hasattr(self._screen.printer.klippy, 'subscribe_object'):
             try:
                 self._screen.printer.klippy.subscribe_object("saved_variables", ["variables"])
-                logging.info("ACE: Subscribed to saved_variables updates")
+                logging.info("ACE: 已订阅 saved_variables 更新")
             except Exception as e:
-                logging.error(f"ACE: Failed to subscribe to saved_variables: {e}")
+                logging.error(f"ACE: 订阅 saved_variables 失败: {e}")
         
-        # Initialize loaded slot from saved_variables (will be updated in get_current_loaded_slot)
+        # 从 saved_variables 初始化已加载料盘（将在 get_current_loaded_slot 中更新）
         
-        # Try to initialize the current loaded slot immediately
+        # 立即尝试初始化当前已加载料盘
         self.initialize_loaded_slot()
     
     def add_custom_css(self):
-        """Add custom CSS for slot appearance - using specific ACE classes to avoid conflicts"""
+        """添加自定义 CSS 用于料盘外观 - 使用特定的 ACE 类避免冲突"""
         css_provider = Gtk.CssProvider()
         css = """
         .ace_slot_color_indicator {
@@ -145,19 +145,19 @@ class Panel(ScreenPanel):
         )
     
     def set_slot_color(self, color_box, rgb_color):
-        """Set the color of a slot's color indicator"""
+        """设置料盘颜色指示器的颜色"""
         r, g, b = rgb_color
         color = Gdk.RGBA(r/255.0, g/255.0, b/255.0, 1.0)
         color_box.override_background_color(Gtk.StateFlags.NORMAL, color)
     
     def get_current_loaded_slot(self):
-        """Get the currently loaded slot"""
+        """获取当前已加载的料盘"""
         try:
-            # Try to get from printer data first
+            # 首先尝试从打印机数据获取
             if hasattr(self._screen, 'printer') and hasattr(self._screen.printer, 'data'):
                 printer_data = self._screen.printer.data
                 
-                # Check for saved_variables
+                # 检查 saved_variables
                 if 'saved_variables' in printer_data:
                     save_vars = printer_data['saved_variables']
                     
@@ -169,46 +169,46 @@ class Panel(ScreenPanel):
                             self.current_loaded_slot = value
                             return value
             
-            # Return cached value or default
+            # 返回缓存值或默认值
             return getattr(self, 'current_loaded_slot', -1)
             
         except Exception as e:
-            logging.error(f"ACE: Error reading ace_current_index: {e}")
+            logging.error(f"ACE: 读取 ace_current_index 错误: {e}")
             return getattr(self, 'current_loaded_slot', -1)
     
     def initialize_loaded_slot(self):
-        """Initialize the loaded slot from saved_variables or query ACE status"""
-        # Try to get the current loaded slot
+        """从 saved_variables 或查询 ACE 状态初始化已加载料盘"""
+        # 尝试获取当前已加载料盘
         current_slot = self.get_current_loaded_slot()
         
-        # If we still don't have a valid slot, query ACE for current status
+        # 如果仍然没有有效料盘，查询 ACE 当前状态
         if current_slot == -1:
-            logging.info("ACE: No loaded slot found, will query ACE status")
-            # Query ACE for current loaded slot index
+            logging.info("ACE: 未找到已加载料盘，将查询 ACE 状态")
+            # 查询 ACE 当前已加载料盘索引
             if hasattr(self._screen, '_ws') and hasattr(self._screen._ws, 'klippy'):
                 self._screen._ws.klippy.gcode_script("ACE_GET_CURRENT_INDEX")
-                logging.info("ACE: Sent ACE_GET_CURRENT_INDEX command")
+                logging.info("ACE: 已发送 ACE_GET_CURRENT_INDEX 命令")
     
     def show_number_input(self, title, message, current_value, min_val, max_val, callback):
-        """Show number input dialog using compact custom numpad"""
-        # Create a very compact custom numpad that fits in dialog
+        """使用紧凑的自定义数字键盘显示数字输入对话框"""
+        # 创建非常紧凑的自定义数字键盘以适应对话框
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2)
         vbox.set_margin_left(5)
         vbox.set_margin_right(5)
         vbox.set_margin_top(5)
         vbox.set_margin_bottom(5)
         
-        # Store callback and constraints
+        # 存储回调和约束
         self.temp_input_callback = callback
         self.temp_min = min_val
         self.temp_max = max_val
         
-        # Compact title
+        # 紧凑标题
         title_label = Gtk.Label(label=f"{message} ({min_val}-{max_val})")
         title_label.get_style_context().add_class("description")
         vbox.pack_start(title_label, False, False, 0)
         
-        # Entry field with close button
+        # 带关闭按钮的输入字段
         entry_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         
         self.temp_entry = Gtk.Entry()
@@ -217,7 +217,7 @@ class Panel(ScreenPanel):
         self.temp_entry.set_size_request(100, 30)
         entry_box.pack_start(self.temp_entry, True, True, 0)
         
-        # Close button
+        # 关闭按钮
         close_btn = self._gtk.Button("cancel", scale=0.6)
         close_btn.set_size_request(30, 30)
         close_btn.connect("clicked", self.close_temp_dialog)
@@ -225,12 +225,12 @@ class Panel(ScreenPanel):
         
         vbox.pack_start(entry_box, False, False, 2)
         
-        # Compact number grid (smaller buttons)
+        # 紧凑数字网格（更小的按钮）
         numpad = Gtk.Grid(row_homogeneous=True, column_homogeneous=True)
         numpad.set_row_spacing(2)
         numpad.set_column_spacing(2)
         
-        # Number buttons 1-9, 0, backspace, decimal
+        # 数字按钮 1-9, 0, 退格, 小数点
         buttons = [
             ['1', '2', '3'],
             ['4', '5', '6'], 
@@ -241,7 +241,7 @@ class Panel(ScreenPanel):
         for row, button_row in enumerate(buttons):
             for col, btn_text in enumerate(button_row):
                 btn = Gtk.Button(label=btn_text)
-                btn.set_size_request(50, 35)  # Small compact buttons
+                btn.set_size_request(50, 35)  # 小型紧凑按钮
                 btn.get_style_context().add_class("numpad_key")
                 if btn_text == '⌫':
                     btn.connect("clicked", self.numpad_backspace)
@@ -251,13 +251,13 @@ class Panel(ScreenPanel):
         
         vbox.pack_start(numpad, False, False, 2)
         
-        # OK button
-        ok_btn = self._gtk.Button("complete", "OK", "color1")
+        # 确定按钮
+        ok_btn = self._gtk.Button("complete", "确定", "color1")
         ok_btn.set_size_request(-1, 35)
         ok_btn.connect("clicked", self.handle_temp_ok)
         vbox.pack_start(ok_btn, False, False, 2)
         
-        # Create dialog with no extra buttons
+        # 创建无额外按钮的对话框
         buttons = []
         
         def response_callback(dialog, response_id):
@@ -266,91 +266,91 @@ class Panel(ScreenPanel):
         self.temp_input_dialog = self._gtk.Dialog(title, buttons, vbox, response_callback)
     
     def numpad_clicked(self, widget, digit):
-        """Handle number button clicks"""
+        """处理数字按钮点击"""
         current = self.temp_entry.get_text()
         self.temp_entry.set_text(current + digit)
     
     def numpad_backspace(self, widget):
-        """Handle backspace button"""
+        """处理退格按钮"""
         current = self.temp_entry.get_text()
         if len(current) > 0:
             self.temp_entry.set_text(current[:-1])
     
     def handle_temp_ok(self, widget):
-        """Handle OK button click"""
+        """处理确定按钮点击"""
         try:
             value = int(float(self.temp_entry.get_text()))
             if self.temp_min <= value <= self.temp_max:
                 self.temp_input_callback(value)
                 self.close_temp_dialog()
             else:
-                self._screen.show_popup_message(f"Value must be between {self.temp_min}-{self.temp_max}")
+                self._screen.show_popup_message(f"数值必须在 {self.temp_min}-{self.temp_max} 之间")
         except (ValueError, TypeError):
-            self._screen.show_popup_message("Invalid number")
+            self._screen.show_popup_message("无效数字")
     
     def close_temp_dialog(self, widget=None):
-        """Close temperature input dialog"""
+        """关闭温度输入对话框"""
         if hasattr(self, 'temp_input_dialog') and self.temp_input_dialog:
             if hasattr(self._gtk, 'remove_dialog'):
                 self._gtk.remove_dialog(self.temp_input_dialog)
             self.temp_input_dialog = None
     
     def show_color_picker(self, title, current_color, callback):
-        """Show very compact color picker dialog"""
-        # Store the callback for the color picker
+        """显示非常紧凑的颜色选择器对话框"""
+        # 存储颜色选择器的回调
         self.color_picker_callback = callback
         
-        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)  # Minimal spacing
-        main_box.set_margin_left(10)  # Minimal margins
+        main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)  # 最小间距
+        main_box.set_margin_left(10)  # 最小边距
         main_box.set_margin_right(10)
         main_box.set_margin_top(10)
         main_box.set_margin_bottom(10)
         
-        # Current color values
+        # 当前颜色值
         self.picker_rgb = list(current_color)
         
-        # Single row with preview and RGB display
+        # 单行显示预览和 RGB 显示
         top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         
-        # Color preview
+        # 颜色预览
         self.color_preview_widget = Gtk.EventBox()
         self.color_preview_widget.get_style_context().add_class("ace_color_preview")
-        self.color_preview_widget.set_size_request(60, 30)  # Smaller preview
+        self.color_preview_widget.set_size_request(60, 30)  # 更小的预览
         self.set_color_preview(self.color_preview_widget, self.picker_rgb)
         top_row.pack_start(self.color_preview_widget, False, False, 0)
         
-        # RGB values display
+        # RGB 值显示
         self.rgb_label_widget = Gtk.Label(label=f"RGB: {self.picker_rgb[0]},{self.picker_rgb[1]},{self.picker_rgb[2]}")
         self.rgb_label_widget.set_halign(Gtk.Align.START)
         top_row.pack_start(self.rgb_label_widget, True, True, 0)
         
         main_box.pack_start(top_row, False, False, 0)
         
-        # Very compact sliders - horizontal layout
+        # 非常紧凑的滑块 - 水平布局
         sliders_grid = Gtk.Grid()
         sliders_grid.set_row_spacing(3)
         sliders_grid.set_column_spacing(5)
         
-        # Create RGB sliders with references to update function
-        self.create_mini_slider("R", 0, 0, sliders_grid)
-        self.create_mini_slider("G", 1, 1, sliders_grid)
-        self.create_mini_slider("B", 2, 2, sliders_grid)
+        # 创建 RGB 滑块并引用更新函数
+        self.create_mini_slider("红", 0, 0, sliders_grid)
+        self.create_mini_slider("绿", 1, 1, sliders_grid)
+        self.create_mini_slider("蓝", 2, 2, sliders_grid)
         
         main_box.pack_start(sliders_grid, False, False, 0)
         
-        # Minimal preset colors - single row
-        #presets_label = Gtk.Label(label="Presets:")
+        # 最小预设颜色 - 单行
+        #presets_label = Gtk.Label(label="预设:")
         #presets_label.set_halign(Gtk.Align.START)
         #main_box.pack_start(presets_label, False, False, 0)
         
-        # Just 6 most common colors in one row
+        # 仅6种最常见颜色在一行
         preset_colors = [
-            ("W", [255, 255, 255]),
-            ("K", [0, 0, 0]),
-            ("R", [255, 0, 0]),
-            ("G", [0, 255, 0]),
-            ("B", [0, 0, 255]),
-            ("Y", [255, 255, 0])
+            ("白", [255, 255, 255]),
+            ("黑", [0, 0, 0]),
+            ("红", [255, 0, 0]),
+            ("绿", [0, 255, 0]),
+            ("蓝", [0, 0, 255]),
+            ("黄", [255, 255, 0])
         ]
         
         preset_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=3)
@@ -358,14 +358,14 @@ class Panel(ScreenPanel):
         
         for name, rgb in preset_colors:
             preset_btn = Gtk.Button()
-            preset_btn.set_size_request(35, 25)  # Very small buttons
+            preset_btn.set_size_request(35, 25)  # 非常小的按钮
             preset_btn.set_label(name)
             
-            # Set button colors
+            # 设置按钮颜色
             preset_color = Gdk.RGBA(rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0, 1.0)
             preset_btn.override_background_color(Gtk.StateFlags.NORMAL, preset_color)
             
-            # Set text color
+            # 设置文本颜色
             brightness = (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114)
             text_color = Gdk.RGBA(0, 0, 0, 1) if brightness > 128 else Gdk.RGBA(1, 1, 1, 1)
             preset_btn.override_color(Gtk.StateFlags.NORMAL, text_color)
@@ -380,30 +380,30 @@ class Panel(ScreenPanel):
         main_box.pack_start(preset_row, False, False, 0)
         
         buttons = [
-            {"name": "Cancel", "response": Gtk.ResponseType.CANCEL},
-            {"name": "OK", "response": Gtk.ResponseType.OK}
+            {"name": "取消", "response": Gtk.ResponseType.CANCEL},
+            {"name": "确定", "response": Gtk.ResponseType.OK}
         ]
         
-        # Use the KlipperScreen dialog method
+        # 使用 KlipperScreen 对话框方法
         self._gtk.Dialog(title, buttons, main_box, self.color_picker_response)
     
     def create_mini_slider(self, color_name, color_index, row, grid):
-        """Create a mini slider for RGB color component"""
-        # Label
+        """为 RGB 颜色分量创建迷你滑块"""
+        # 标签
         label = Gtk.Label(label=f"{color_name}:")
         label.set_size_request(25, -1)
         grid.attach(label, 0, row, 1, 1)
         
-        # Value label
+        # 值标签
         value_label = Gtk.Label(label=str(self.picker_rgb[color_index]))
         value_label.set_size_request(30, -1)
         value_label.set_halign(Gtk.Align.END)
         grid.attach(value_label, 1, row, 1, 1)
         
-        # Slider
+        # 滑块
         slider = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 255, 1)
         slider.set_value(self.picker_rgb[color_index])
-        slider.set_size_request(150, 20)  # Compact slider
+        slider.set_size_request(150, 20)  # 紧凑滑块
         slider.set_draw_value(False)
         
         def on_slider_change(widget):
@@ -416,37 +416,37 @@ class Panel(ScreenPanel):
         grid.attach(slider, 2, row, 1, 1)
     
     def update_color_preview(self):
-        """Update the color preview in the color picker"""
+        """更新颜色选择器中的颜色预览"""
         self.set_color_preview(self.color_preview_widget, self.picker_rgb)
         self.rgb_label_widget.set_text(f"RGB: {self.picker_rgb[0]},{self.picker_rgb[1]},{self.picker_rgb[2]}")
     
     def color_picker_response(self, dialog, response_id):
-        """Handle color picker dialog response"""
-        logging.info(f"ACE: Color picker response: {response_id}")
+        """处理颜色选择器对话框响应"""
+        logging.info(f"ACE: 颜色选择器响应: {response_id}")
         try:
             if response_id == Gtk.ResponseType.OK:
-                logging.info(f"ACE: Color picker OK clicked, RGB: {self.picker_rgb}")
+                logging.info(f"ACE: 颜色选择器确定点击, RGB: {self.picker_rgb}")
                 if self.color_picker_callback:
                     self.color_picker_callback(self.picker_rgb[:])
             else:
-                logging.info("ACE: Color picker cancelled")
+                logging.info("ACE: 颜色选择器已取消")
         finally:
-            # Ensure dialog is closed by removing it
+            # 通过移除对话框确保对话框关闭
             if hasattr(self._gtk, 'remove_dialog') and dialog:
                 self._gtk.remove_dialog(dialog)
-                logging.info("ACE: Color picker dialog closed")
+                logging.info("ACE: 颜色选择器对话框已关闭")
     
     def set_color_preview(self, widget, rgb_color):
-        """Set the color preview widget background"""
+        """设置颜色预览小部件背景"""
         r, g, b = rgb_color
         color = Gdk.RGBA(r/255.0, g/255.0, b/255.0, 1.0)
         widget.override_background_color(Gtk.StateFlags.NORMAL, color)
     
     def update_slot_loaded_states(self):
-        """Update all slot loaded states based on ace_current_index"""
+        """基于 ace_current_index 更新所有料盘加载状态"""
         current_loaded = self.get_current_loaded_slot()
         
-        logging.info(f"ACE: Current loaded slot: {current_loaded}")
+        logging.info(f"ACE: 当前已加载料盘: {current_loaded}")
         
         for slot in range(4):
             slot_btn = self.slot_buttons[slot]
@@ -457,242 +457,242 @@ class Panel(ScreenPanel):
                 slot_btn.get_style_context().remove_class("ace_slot_loaded")
                 slot_btn.get_style_context().add_class("ace_slot_empty")
         
-        # Update status label
+        # 更新状态标签
         if current_loaded != -1:
-            self.status_label.set_text(f"ACE: Ready - Slot {current_loaded} loaded")
+            self.status_label.set_text(f"ACE: 就绪 - 料盘 {current_loaded} 已加载")
         else:
-            self.status_label.set_text("ACE: Ready")
+            self.status_label.set_text("ACE: 就绪")
     
     def on_endless_spool_toggled(self, switch, state):
-        """Handle endless spool switch toggle"""
+        """处理自动续料开关切换"""
         self.endless_spool_enabled = state
         
-        # Send command to ACE system to enable/disable endless spool
+        # 发送命令到 ACE 系统启用/禁用自动续料
         if state:
             self._screen._ws.klippy.gcode_script("ACE_ENABLE_ENDLESS_SPOOL")
-            self._screen.show_popup_message("Endless spool enabled", 1)
-            logging.info("ACE: Endless spool enabled")
+            self._screen.show_popup_message("自动续料已启用", 1)
+            logging.info("ACE: 自动续料已启用")
         else:
             self._screen._ws.klippy.gcode_script("ACE_DISABLE_ENDLESS_SPOOL")
-            self._screen.show_popup_message("Endless spool disabled", 1)
-            logging.info("ACE: Endless spool disabled")
+            self._screen.show_popup_message("自动续料已禁用", 1)
+            logging.info("ACE: 自动续料已禁用")
     
     def on_slot_clicked(self, widget, slot):
-        """Handle slot button clicks"""
+        """处理料盘按钮点击"""
         current_loaded = self.get_current_loaded_slot()
         
         if current_loaded == slot:
-            # Clicked on loaded slot - ask to unload
+            # 点击已加载料盘 - 询问卸载
             self.show_unload_confirmation(slot)
         else:
-            # Clicked on unloaded slot - ask to load
+            # 点击未加载料盘 - 询问加载
             self.show_load_confirmation(slot)
     
     def show_load_confirmation(self, slot):
-        """Show confirmation dialog to load a slot"""
+        """显示加载料盘的确认对话框"""
         slot_info = self.slot_labels[slot].get_text()
-        if slot_info == "Empty":
-            self._screen.show_popup_message("Slot is empty. Configure it first using the settings button.")
+        if slot_info == "空":
+            self._screen.show_popup_message("料盘为空。请先使用设置按钮进行配置。")
             return
         
         current_loaded = self.get_current_loaded_slot()
-        message = f"Load Slot {slot}?\n\n{slot_info}"
+        message = f"加载料盘 {slot}？\n\n{slot_info}"
         if current_loaded != -1:
-            message += f"\n\nThis will unload Slot {current_loaded}"
+            message += f"\n\n这将卸载料盘 {current_loaded}"
         
         label = Gtk.Label(label=message)
         label.set_line_wrap(True)
         label.set_justify(Gtk.Justification.CENTER)
         
         buttons = [
-            {"name": "Cancel", "response": Gtk.ResponseType.CANCEL},
-            {"name": "Load", "response": Gtk.ResponseType.OK}
+            {"name": "取消", "response": Gtk.ResponseType.CANCEL},
+            {"name": "加载", "response": Gtk.ResponseType.OK}
         ]
         
         def load_response(dialog, response_id):
             try:
                 if response_id == Gtk.ResponseType.OK:
-                    # Update cached value immediately for responsive UI
+                    # 立即更新缓存值以实现响应式 UI
                     self.current_loaded_slot = slot
                     self.update_slot_loaded_states()
                     
-                    # Send the actual command
+                    # 发送实际命令
                     self._screen._ws.klippy.gcode_script(f"ACE_CHANGE_TOOL TOOL={slot}")
-                    self._screen.show_popup_message(f"Loading slot {slot}...", 1)
+                    self._screen.show_popup_message(f"正在加载料盘 {slot}...", 1)
                     
-                    # Return to main screen if we're in configuration mode
+                    # 如果处于配置模式，则返回主屏幕
                     if hasattr(self, 'current_config_slot'):
                         self.return_to_main_screen()
                 elif response_id == Gtk.ResponseType.CANCEL:
-                    # Just close the dialog - no action needed
-                    logging.info(f"ACE: Load slot {slot} cancelled by user")
+                    # 只需关闭对话框 - 无需操作
+                    logging.info(f"ACE: 用户取消了加载料盘 {slot}")
             finally:
-                # Ensure dialog is closed
+                # 确保对话框关闭
                 if hasattr(self._gtk, 'remove_dialog') and dialog:
                     self._gtk.remove_dialog(dialog)
         
-        self._gtk.Dialog(f"Load Slot {slot}", buttons, label, load_response)
+        self._gtk.Dialog(f"加载料盘 {slot}", buttons, label, load_response)
     
     def show_unload_confirmation(self, slot):
-        """Show confirmation dialog to unload a slot"""
+        """显示卸载料盘的确认对话框"""
         slot_info = self.slot_labels[slot].get_text()
-        message = f"Unload Slot {slot}?\n\n{slot_info}"
+        message = f"卸载料盘 {slot}？\n\n{slot_info}"
         
         label = Gtk.Label(label=message)
         label.set_line_wrap(True)
         label.set_justify(Gtk.Justification.CENTER)
         
         buttons = [
-            {"name": "Cancel", "response": Gtk.ResponseType.CANCEL},
-            {"name": "Unload", "response": Gtk.ResponseType.OK}
+            {"name": "取消", "response": Gtk.ResponseType.CANCEL},
+            {"name": "卸载", "response": Gtk.ResponseType.OK}
         ]
         
         def unload_response(dialog, response_id):
             try:
                 if response_id == Gtk.ResponseType.OK:
-                    # Update cached value immediately for responsive UI
+                    # 立即更新缓存值以实现响应式 UI
                     self.current_loaded_slot = -1
                     self.update_slot_loaded_states()
                     
-                    # Send the actual command
+                    # 发送实际命令
                     self._screen._ws.klippy.gcode_script(f"ACE_CHANGE_TOOL TOOL=-1")
-                    self._screen.show_popup_message(f"Unloading slot {slot}...", 1)
+                    self._screen.show_popup_message(f"正在卸载料盘 {slot}...", 1)
                 elif response_id == Gtk.ResponseType.CANCEL:
-                    # Just close the dialog - no action needed
-                    logging.info(f"ACE: Unload slot {slot} cancelled by user")
+                    # 只需关闭对话框 - 无需操作
+                    logging.info(f"ACE: 用户取消了卸载料盘 {slot}")
             finally:
-                # Ensure dialog is closed
+                # 确保对话框关闭
                 if hasattr(self._gtk, 'remove_dialog') and dialog:
                     self._gtk.remove_dialog(dialog)
         
-        self._gtk.Dialog(f"Unload Slot {slot}", buttons, label, unload_response)
+        self._gtk.Dialog(f"卸载料盘 {slot}", buttons, label, unload_response)
     
     def activate(self):
-        """Called when panel is shown"""
-        logging.info("ACE: Panel activated")
+        """面板显示时调用"""
+        logging.info("ACE: 面板已激活")
         
-        # Try to initialize the loaded slot from saved_variables again
+        # 再次尝试从 saved_variables 初始化已加载料盘
         self.initialize_loaded_slot()
         
-        # Update status which will query ACE and update display
+        # 更新状态，将查询 ACE 并更新显示
         self.update_status()
     
     def delayed_init(self):
-        """Delayed initialization to allow save_variables to load"""
-        logging.info("ACE: Delayed initialization called")
+        """延迟初始化以允许 save_variables 加载"""
+        logging.info("ACE: 延迟初始化调用")
         current_slot = self.get_current_loaded_slot()
         if current_slot != -1:
-            logging.info(f"ACE: Delayed init found slot: {current_slot}")
+            logging.info(f"ACE: 延迟初始化找到料盘: {current_slot}")
             self.update_slot_loaded_states()
-        return False  # Don't repeat the timeout
+        return False  # 不重复超时
     
     def refresh_status(self, widget):
-        """Manual refresh button"""
-        # Query ACE data
+        """手动刷新按钮"""
+        # 查询 ACE 数据
         self._screen._ws.klippy.gcode_script("ACE_QUERY_SLOTS")
         
-        # Query current loaded index
+        # 查询当前加载索引
         self._screen._ws.klippy.gcode_script("ACE_GET_CURRENT_INDEX")
         
-        # Update loaded state
+        # 更新加载状态
         self.update_slot_loaded_states()
-        self._screen.show_popup_message("Refreshing spool data...", 1)
+        self._screen.show_popup_message("正在刷新耗材数据...", 1)
     
     def show_slot_settings(self, widget, slot):
-        """Show two-column slot configuration screen"""
+        """显示双列料盘配置屏幕"""
         self.current_config_slot = slot
         self.show_slot_config_screen(slot)
     
     def show_slot_config_screen(self, slot):
-        """Create compact two-column configuration screen that fits 480px"""
-        # Load current values from slot data
+        """创建紧凑的双列配置屏幕以适应 480px"""
+        # 从料盘数据加载当前值
         slot_info = self.slot_data[slot]
         self.config_material = slot_info["material"]
-        self.config_color = slot_info["color"][:]  # Copy the color array
+        self.config_color = slot_info["color"][:]  # 复制颜色数组
         self.config_temp = slot_info["temp"]
         
-        logging.info(f"ACE: Loading slot {slot} config - Material: {self.config_material}, Color: {self.config_color}, Temp: {self.config_temp}")
+        logging.info(f"ACE: 加载料盘 {slot} 配置 - 材料: {self.config_material}, 颜色: {self.config_color}, 温度: {self.config_temp}")
         
-        # Clear current content and create two-column layout
+        # 清除当前内容并创建双列布局
         for child in self.content.get_children():
             self.content.remove(child)
         
-        # Create main grid with two columns - compact spacing
+        # 创建主网格，两列 - 紧凑间距
         main_grid = Gtk.Grid()
         main_grid.set_column_homogeneous(True)
-        main_grid.set_row_spacing(2)  # Reduced from 10
-        main_grid.set_column_spacing(1)  # Reduced from 10
-        main_grid.set_margin_left(5)  # Reduced from 15
+        main_grid.set_row_spacing(2)  # 从 10 减少
+        main_grid.set_column_spacing(1)  # 从 10 减少
+        main_grid.set_margin_left(5)  # 从 15 减少
         main_grid.set_margin_right(10)
-        main_grid.set_margin_top(2)   # Reduced from 15
+        main_grid.set_margin_top(2)   # 从 15 减少
         main_grid.set_margin_bottom(1)
         
-        # Left column - Configuration options (compact)
-        left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)  # Reduced from 15
+        # 左列 - 配置选项（紧凑）
+        left_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)  # 从 15 减少
         
-        # Compact title for left column
-        config_title = Gtk.Label(label=f"Configure Slot {slot}")
-        config_title.get_style_context().add_class("description")  # Smaller than temperature_entry
+        # 左列紧凑标题
+        config_title = Gtk.Label(label=f"配置料盘 {slot}")
+        config_title.get_style_context().add_class("description")  # 比 temperature_entry 小
         left_box.pack_start(config_title, False, False, 0)
         
-        # Material selection button - smaller, with current value
-        self.material_btn = self._gtk.Button("filament", f"Material: {self.config_material}", "color1")
-        self.material_btn.set_size_request(-1, 45)  # Reduced from 60
+        # 材料选择按钮 - 更小，带当前值
+        self.material_btn = self._gtk.Button("filament", f"材料: {self.config_material}", "color1")
+        self.material_btn.set_size_request(-1, 45)  # 从 60 减少
         self.material_btn.connect("clicked", self.show_material_selection)
         left_box.pack_start(self.material_btn, False, False, 0)
         
-        # Color selection button with preview - smaller, with current color
-        color_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)  # Reduced from 10
+        # 颜色选择按钮带预览 - 更小，带当前颜色
+        color_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)  # 从 10 减少
         
-        # Smaller color preview with current color
+        # 更小的颜色预览带当前颜色
         self.config_color_preview = Gtk.EventBox()
-        self.config_color_preview.set_size_request(30, 30)  # Reduced from 40x40
+        self.config_color_preview.set_size_request(30, 30)  # 从 40x40 减少
         self.config_color_preview.get_style_context().add_class("ace_color_preview")
         self.set_color_preview(self.config_color_preview, self.config_color)
         color_box.pack_start(self.config_color_preview, False, False, 0)
         
-        # Smaller color button
-        self.color_btn = self._gtk.Button("palette", "Select Color", "color2")
-        self.color_btn.set_size_request(-1, 45)  # Reduced from 60
+        # 更小的颜色按钮
+        self.color_btn = self._gtk.Button("palette", "选择颜色", "color2")
+        self.color_btn.set_size_request(-1, 45)  # 从 60 减少
         self.color_btn.connect("clicked", self.show_color_selection)
         color_box.pack_start(self.color_btn, True, True, 0)
         
         left_box.pack_start(color_box, False, False, 0)
         
-        # Temperature selection button - smaller, with current value
-        self.temp_btn = self._gtk.Button("heat-up", f"Temperature: {self.config_temp}°C", "color3")
-        self.temp_btn.set_size_request(-1, 45)  # Reduced from 60
+        # 温度选择按钮 - 更小，带当前值
+        self.temp_btn = self._gtk.Button("heat-up", f"温度: {self.config_temp}°C", "color3")
+        self.temp_btn.set_size_request(-1, 45)  # 从 60 减少
         self.temp_btn.connect("clicked", self.show_temperature_selection)
         left_box.pack_start(self.temp_btn, False, False, 0)
         
-        # Compact action buttons
-        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)  # Reduced from 10
+        # 紧凑操作按钮
+        action_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)  # 从 10 减少
         action_box.set_homogeneous(True)
         
-        # Smaller save button
-        save_btn = self._gtk.Button("complete", "Save", "color1")
-        save_btn.set_size_request(-1, 40)  # Reduced from 50
+        # 更小的保存按钮
+        save_btn = self._gtk.Button("complete", "保存", "color1")
+        save_btn.set_size_request(-1, 40)  # 从 50 减少
         save_btn.connect("clicked", self.save_slot_config)
         action_box.pack_start(save_btn, True, True, 0)
         
-        # Smaller cancel button
-        cancel_btn = self._gtk.Button("cancel", "Cancel", "color4")
-        cancel_btn.set_size_request(-1, 40)  # Reduced from 50
+        # 更小的取消按钮
+        cancel_btn = self._gtk.Button("cancel", "取消", "color4")
+        cancel_btn.set_size_request(-1, 40)  # 从 50 减少
         cancel_btn.connect("clicked", self.cancel_slot_config)
         action_box.pack_start(cancel_btn, True, True, 0)
         
         left_box.pack_end(action_box, False, False, 0)
         
-        # Right column - Selection panels (compact)
-        self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)  # Reduced from 10
+        # 右列 - 选择面板（紧凑）
+        self.right_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)  # 从 10 减少
         
-        # Compact welcome message for right column
-        welcome_label = Gtk.Label(label="Select an option from the left\nto configure the slot")
+        # 右列紧凑欢迎消息
+        welcome_label = Gtk.Label(label="从左侧选择一个选项\n来配置料盘")
         welcome_label.set_justify(Gtk.Justification.CENTER)
         welcome_label.get_style_context().add_class("description")
         self.right_box.pack_start(welcome_label, True, True, 0)
         
-        # Add columns to main grid
+        # 添加列到主网格
         main_grid.attach(left_box, 0, 0, 1, 1)
         main_grid.attach(self.right_box, 1, 0, 1, 1)
         
@@ -700,57 +700,57 @@ class Panel(ScreenPanel):
         self.content.show_all()
     
     def show_material_selection(self, widget):
-        """Show compact material selection in right column"""
-        # Clear right column
+        """在右列显示紧凑的材料选择"""
+        # 清除右列
         for child in self.right_box.get_children():
             self.right_box.remove(child)
         
-        # Compact material selection title
-        title = Gtk.Label(label="Select Material")
-        title.get_style_context().add_class("description")  # Smaller title
+        # 紧凑材料选择标题
+        title = Gtk.Label(label="选择材料")
+        title.get_style_context().add_class("description")  # 更小标题
         self.right_box.pack_start(title, False, False, 0)
         
-        # Compact material list
+        # 紧凑材料列表
         materials = ["PLA", "ABS", "PETG", "TPU", "ASA", "PVA", "HIPS", "PC"]
         
         for material in materials:
             material_btn = self._gtk.Button("filament", material, "color2")
-            material_btn.set_size_request(-1, 35)  # Reduced from 50
+            material_btn.set_size_request(-1, 35)  # 从 50 减少
             material_btn.connect("clicked", self.select_material, material)
             
-            # Highlight current selection
+            # 高亮当前选择
             if material == self.config_material:
                 material_btn.get_style_context().add_class("button_active")
             
-            self.right_box.pack_start(material_btn, False, False, 3)  # Reduced spacing
+            self.right_box.pack_start(material_btn, False, False, 3)  # 减少间距
         
         self.right_box.show_all()
     
     def select_material(self, widget, material):
-        """Handle material selection"""
+        """处理材料选择"""
         self.config_material = material
-        self.material_btn.set_label(f"Material: {material}")
+        self.material_btn.set_label(f"材料: {material}")
         
-        # Clear right column back to welcome message
+        # 清除右列回到欢迎消息
         self.clear_right_column()
     
     def show_color_selection(self, widget):
-        """Show compact color picker in right column"""
-        # Clear right column
+        """在右列显示紧凑的颜色选择器"""
+        # 清除右列
         for child in self.right_box.get_children():
             self.right_box.remove(child)
         
-        # Compact color selection title
-        #title = Gtk.Label(label="Select Color")
+        # 紧凑颜色选择标题
+        #title = Gtk.Label(label="选择颜色")
         #title.get_style_context().add_class("description")
         #self.right_box.pack_start(title, False, False, 0)
         
-        # Compact current color preview and RGB display
-        preview_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)  # Reduced spacing
+        # 紧凑当前颜色预览和 RGB 显示
+        preview_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)  # 减少间距
         preview_box.set_halign(Gtk.Align.CENTER)
         
         self.right_color_preview = Gtk.EventBox()
-        self.right_color_preview.set_size_request(40, 40)  # Smaller preview
+        self.right_color_preview.set_size_request(40, 40)  # 更小预览
         self.right_color_preview.get_style_context().add_class("ace_color_preview")
         self.set_color_preview(self.right_color_preview, self.config_color)
         preview_box.pack_start(self.right_color_preview, False, False, 0)
@@ -759,22 +759,22 @@ class Panel(ScreenPanel):
         self.rgb_display.get_style_context().add_class("description")
         preview_box.pack_start(self.rgb_display, False, False, 0)
         
-        self.right_box.pack_start(preview_box, False, False, 5)  # Reduced margin
+        self.right_box.pack_start(preview_box, False, False, 5)  # 减少边距
         
-        # Compact RGB sliders
-        slider_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)  # Reduced spacing
+        # 紧凑 RGB 滑块
+        slider_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)  # 减少间距
         
         self.color_sliders = {}
-        for i, color_name in enumerate(['Red', 'Green', 'Blue']):
-            color_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)  # Reduced spacing
+        for i, color_name in enumerate(['红', '绿', '蓝']):
+            color_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)  # 减少间距
             
-            label = Gtk.Label(label=f"{color_name[0]}:")  # Just first letter
-            label.set_size_request(20, -1)  # Smaller label
+            label = Gtk.Label(label=f"{color_name[0]}:")  # 仅首字母
+            label.set_size_request(20, -1)  # 更小标签
             color_row.pack_start(label, False, False, 0)
             
             slider = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 255, 1)
             slider.set_value(self.config_color[i])
-            slider.set_size_request(150, 25)  # Smaller slider
+            slider.set_size_request(150, 25)  # 更小滑块
             slider.set_draw_value(True)
             slider.set_value_pos(Gtk.PositionType.RIGHT)
             slider.connect("value-changed", self.on_color_slider_changed, i)
@@ -785,128 +785,128 @@ class Panel(ScreenPanel):
         
         self.right_box.pack_start(slider_box, False, False, 5)
         
-        # Compact color presets
-        #presets_label = Gtk.Label(label="Presets")
+        # 紧凑颜色预设
+        #presets_label = Gtk.Label(label="预设")
         #presets_label.get_style_context().add_class("description")
         #self.right_box.pack_start(presets_label, False, False, 3)
         
         preset_colors = [
-            ("White", [255, 255, 255]),
-            ("Black", [0, 0, 0]),
-            ("Red", [255, 0, 0]),
-            ("Green", [0, 255, 0]),
-            ("Blue", [0, 0, 255]),
-            ("Yellow", [255, 255, 0])
+            ("白色", [255, 255, 255]),
+            ("黑色", [0, 0, 0]),
+            ("红色", [255, 0, 0]),
+            ("绿色", [0, 255, 0]),
+            ("蓝色", [0, 0, 255]),
+            ("黄色", [255, 255, 0])
         ]
         
         preset_grid = Gtk.Grid()
-        preset_grid.set_row_spacing(3)  # Reduced spacing
+        preset_grid.set_row_spacing(3)  # 减少间距
         preset_grid.set_column_spacing(3)
         preset_grid.set_halign(Gtk.Align.CENTER)
         
         for i, (name, rgb) in enumerate(preset_colors):
             preset_btn = Gtk.Button(label=name)
-            preset_btn.set_size_request(60, 25)  # Much smaller buttons
+            preset_btn.set_size_request(60, 25)  # 更小的按钮
             
-            # Set button color
+            # 设置按钮颜色
             color = Gdk.RGBA(rgb[0]/255.0, rgb[1]/255.0, rgb[2]/255.0, 1.0)
             preset_btn.override_background_color(Gtk.StateFlags.NORMAL, color)
             
-            # Set text color based on brightness
+            # 基于亮度设置文本颜色
             brightness = (rgb[0] * 0.299 + rgb[1] * 0.587 + rgb[2] * 0.114)
             text_color = Gdk.RGBA(0, 0, 0, 1) if brightness > 128 else Gdk.RGBA(1, 1, 1, 1)
             preset_btn.override_color(Gtk.StateFlags.NORMAL, text_color)
             
             preset_btn.connect("clicked", self.select_color_preset, rgb[:])
-            preset_grid.attach(preset_btn, i % 3, i // 3, 1, 1)  # 3 columns instead of 4
+            preset_grid.attach(preset_btn, i % 3, i // 3, 1, 1)  # 3列而不是4
         
         self.right_box.pack_start(preset_grid, False, False, 5)
         
-        # Compact apply color button
-        apply_btn = self._gtk.Button("complete", "Apply Color", "color1")
-        apply_btn.set_size_request(-1, 30)  # Smaller button
+        # 紧凑应用颜色按钮
+        apply_btn = self._gtk.Button("complete", "应用颜色", "color1")
+        apply_btn.set_size_request(-1, 30)  # 更小按钮
         apply_btn.connect("clicked", self.apply_color_selection)
         self.right_box.pack_end(apply_btn, False, False, 0)
         
         self.right_box.show_all()
     
     def on_color_slider_changed(self, slider, color_index):
-        """Handle color slider changes"""
+        """处理颜色滑块变化"""
         value = int(slider.get_value())
         self.config_color[color_index] = value
         
-        # Update preview and RGB display
+        # 更新预览和 RGB 显示
         self.set_color_preview(self.right_color_preview, self.config_color)
         self.rgb_display.set_text(f"RGB: {self.config_color[0]},{self.config_color[1]},{self.config_color[2]}")
     
     def select_color_preset(self, widget, rgb):
-        """Handle color preset selection"""
+        """处理颜色预设选择"""
         self.config_color = rgb[:]
         
-        # Update sliders
+        # 更新滑块
         for i, value in enumerate(rgb):
             self.color_sliders[i].set_value(value)
         
-        # Update preview and RGB display
+        # 更新预览和 RGB 显示
         self.set_color_preview(self.right_color_preview, self.config_color)
         self.rgb_display.set_text(f"RGB: {self.config_color[0]},{self.config_color[1]},{self.config_color[2]}")
     
     def apply_color_selection(self, widget):
-        """Apply selected color"""
+        """应用选定的颜色"""
         self.set_color_preview(self.config_color_preview, self.config_color)
         self.clear_right_column()
     
     def show_temperature_selection(self, widget):
-        """Show temperature selection using Keypad like temperature.py"""
-        # Clear right column
+        """使用类似 temperature.py 的 Keypad 显示温度选择"""
+        # 清除右列
         for child in self.right_box.get_children():
             self.right_box.remove(child)
         
-        # Temperature selection title
-        title = Gtk.Label(label="Set Temperature")
+        # 温度选择标题
+        title = Gtk.Label(label="设置温度")
         title.get_style_context().add_class("temperature_entry")
         self.right_box.pack_start(title, False, False, 0)
         
-        # Create keypad widget exactly like temperature.py
+        # 创建与 temperature.py 完全相同的键盘小部件
         if not hasattr(self, 'config_keypad'):
             self.config_keypad = Keypad(
                 self._screen,
                 self.handle_temperature_input,
-                None,  # No PID calibrate
-                self.clear_right_column,  # Close callback
+                None,  # 无 PID 校准
+                self.clear_right_column,  # 关闭回调
             )
         
-        # Set current temperature value
+        # 设置当前温度值
         self.config_keypad.clear()
         self.config_keypad.labels['entry'].set_text(str(self.config_temp))
         
-        # Hide PID button
+        # 隐藏 PID 按钮
         self.config_keypad.show_pid(False)
         
-        # Add keypad to right column
+        # 添加键盘到右列
         self.right_box.pack_start(self.config_keypad, True, True, 0)
         
         self.right_box.show_all()
     
     def handle_temperature_input(self, temp):
-        """Handle temperature input from keypad"""
+        """处理来自键盘的温度输入"""
         try:
             temp_value = int(float(temp))
             if 0 <= temp_value <= 300:
                 self.config_temp = temp_value
-                self.temp_btn.set_label(f"Temperature: {temp_value}°C")
+                self.temp_btn.set_label(f"温度: {temp_value}°C")
                 self.clear_right_column()
             else:
-                self._screen.show_popup_message("Temperature must be between 0-300°C")
+                self._screen.show_popup_message("温度必须在 0-300°C 之间")
         except (ValueError, TypeError):
-            self._screen.show_popup_message("Invalid temperature value")
+            self._screen.show_popup_message("无效的温度值")
     
     def clear_right_column(self, widget=None):
-        """Clear right column and show welcome message"""
+        """清除右列并显示欢迎消息"""
         for child in self.right_box.get_children():
             self.right_box.remove(child)
         
-        welcome_label = Gtk.Label(label="Select an option from the left\nto configure the slot")
+        welcome_label = Gtk.Label(label="从左侧选择一个选项\n来配置料盘")
         welcome_label.set_justify(Gtk.Justification.CENTER)
         welcome_label.get_style_context().add_class("description")
         self.right_box.pack_start(welcome_label, True, True, 0)
@@ -914,76 +914,76 @@ class Panel(ScreenPanel):
         self.right_box.show_all()
     
     def save_slot_config(self, widget):
-        """Save slot configuration"""
+        """保存料盘配置"""
         slot = self.current_config_slot
         material = self.config_material
         color = f"{self.config_color[0]},{self.config_color[1]},{self.config_color[2]}"
         temp = self.config_temp
         
-        # Update the stored slot data
+        # 更新存储的料盘数据
         self.slot_data[slot] = {
             "material": material,
-            "color": self.config_color[:],  # Copy the color array
+            "color": self.config_color[:],  # 复制颜色数组
             "temp": temp,
             "status": "ready"
         }
         
-        # Update the slot display immediately
+        # 立即更新料盘显示
         self.slot_labels[slot].set_text(f"{material} {temp}°C")
         self.set_slot_color(self.slot_color_boxes[slot], self.config_color)
         
-        # Send ACE_SET_SLOT command
+        # 发送 ACE_SET_SLOT 命令
         cmd = f"ACE_SET_SLOT INDEX={slot} COLOR={color} MATERIAL={material} TEMP={temp}"
         self._screen._ws.klippy.gcode_script(cmd)
         
-        self._screen.show_popup_message(f"Slot {slot} configured: {material} {temp}°C", 1)
+        self._screen.show_popup_message(f"料盘 {slot} 已配置: {material} {temp}°C", 1)
         
-        # Refresh data and return to main screen
+        # 刷新数据并返回主屏幕
         self._screen._ws.klippy.gcode_script("ACE_QUERY_SLOTS")
         self.return_to_main_screen()
     
     def cancel_slot_config(self, widget):
-        """Cancel configuration and return to main screen"""
+        """取消配置并返回主屏幕"""
         self.return_to_main_screen()
     
     def return_to_main_screen(self):
-        """Return to main ACE panel screen"""
-        # Clear content and recreate main screen
+        """返回主 ACE 面板屏幕"""
+        # 清除内容并重新创建主屏幕
         for child in self.content.get_children():
             self.content.remove(child)
         
-        # Recreate the main ACE panel layout
+        # 重新创建主 ACE 面板布局
         self.create_main_screen()
     
     def create_main_screen(self):
-        """Create the main ACE panel screen layout"""
-        # Create main container
+        """创建主 ACE 面板屏幕布局"""
+        # 创建主容器
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=15)
         main_box.set_margin_left(15)
         main_box.set_margin_right(15)
         main_box.set_margin_top(15)
         main_box.set_margin_bottom(15)
         
-        # Top row with status and endless spool switch
+        # 顶部行，带状态和自动续料开关
         top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         
-        # ACE Status Display
-        self.status_label = Gtk.Label(label="ACE: Ready")
+        # ACE 状态显示
+        self.status_label = Gtk.Label(label="ACE: 就绪")
         self.status_label.get_style_context().add_class("temperature_entry")
         self.status_label.set_size_request(-1, 40)
         self.status_label.set_halign(Gtk.Align.START)
         top_row.pack_start(self.status_label, True, True, 0)
         
-        # Endless Spool switch section (top right)
+        # 自动续料开关部分（右上角）
         endless_spool_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         endless_spool_box.set_halign(Gtk.Align.END)
         
-        # Endless spool label
-        endless_label = Gtk.Label(label="Endless Spool:")
+        # 自动续料标签
+        endless_label = Gtk.Label(label="自动续料:")
         endless_label.get_style_context().add_class("description")
         endless_spool_box.pack_start(endless_label, False, False, 0)
         
-        # Endless spool switch
+        # 自动续料开关
         self.endless_spool_switch = Gtk.Switch()
         self.endless_spool_switch.set_active(self.endless_spool_enabled)
         self.endless_spool_switch.connect("state-set", self.on_endless_spool_toggled)
@@ -992,7 +992,7 @@ class Panel(ScreenPanel):
         top_row.pack_end(endless_spool_box, False, False, 0)
         main_box.pack_start(top_row, False, False, 0)
         
-        # Slots container - horizontal layout
+        # 料盘容器 - 水平布局
         slots_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         slots_box.set_homogeneous(True)
         
@@ -1002,45 +1002,45 @@ class Panel(ScreenPanel):
         self.slot_buttons = []
         
         for slot in range(4):
-            # Create clickable slot button (25% taller)
+            # 创建可点击的料盘按钮（高25%）
             slot_btn = Gtk.Button()
-            slot_btn.get_style_context().add_class("ace_slot_button")  # More specific class
+            slot_btn.get_style_context().add_class("ace_slot_button")  # 更具体的类
             slot_btn.set_relief(Gtk.ReliefStyle.NONE)
-            slot_btn.set_size_request(-1, 125)  # 25% taller (was ~100px, now 125px)
+            slot_btn.set_size_request(-1, 125)  # 高25%（原约100px，现125px）
             slot_btn.connect("clicked", self.on_slot_clicked, slot)
             
-            # Slot content box
+            # 料盘内容框
             slot_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=5)
             slot_content.set_margin_left(8)
             slot_content.set_margin_right(8)
-            slot_content.set_margin_top(10)  # Slightly more top margin
-            slot_content.set_margin_bottom(10)  # Slightly more bottom margin
+            slot_content.set_margin_top(10)  # 稍多顶部边距
+            slot_content.set_margin_bottom(10)  # 稍多底部边距
             
-            # Top row: color indicator and status
+            # 顶部行：颜色指示器和状态
             top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
             
-            # Color rectangle
+            # 颜色矩形
             color_box = Gtk.EventBox()
             color_box.set_size_request(20, 20)
-            color_box.get_style_context().add_class("ace_slot_color_indicator")  # More specific class
-            # Default to black color
+            color_box.get_style_context().add_class("ace_slot_color_indicator")  # 更具体的类
+            # 默认黑色
             self.set_slot_color(color_box, [0, 0, 0])
             top_row.pack_start(color_box, False, False, 0)
             self.slot_color_boxes.append(color_box)
             
-            # Slot label
-            slot_label = Gtk.Label(label="Empty")
-            slot_label.set_ellipsize(Pango.EllipsizeMode.END)  # Fixed: END instead of End
+            # 料盘标签
+            slot_label = Gtk.Label(label="空")
+            slot_label.set_ellipsize(Pango.EllipsizeMode.END)  # 修正: END 而不是 End
             slot_label.set_halign(Gtk.Align.START)
-            slot_label.get_style_context().add_class("ace_slot_label")  # More specific class
+            slot_label.get_style_context().add_class("ace_slot_label")  # 更具体的类
             top_row.pack_start(slot_label, True, True, 0)
             self.slot_labels.append(slot_label)
             
             slot_content.pack_start(top_row, True, True, 0)
             
-            # Slot number label
-            slot_num_label = Gtk.Label(label=f"Slot {slot}")
-            slot_num_label.get_style_context().add_class("ace_slot_number")  # More specific class
+            # 料盘编号标签
+            slot_num_label = Gtk.Label(label=f"料盘 {slot}")
+            slot_num_label.get_style_context().add_class("ace_slot_number")  # 更具体的类
             slot_content.pack_start(slot_num_label, False, False, 0)
             
             slot_btn.add(slot_content)
@@ -1049,38 +1049,38 @@ class Panel(ScreenPanel):
         
         main_box.pack_start(slots_box, False, False, 0)
         
-        # Settings cogs row - below slot boxes (smaller, closer)
+        # 设置齿轮行 - 在料盘框下方（更小，更近）
         settings_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         settings_box.set_homogeneous(True)
-        settings_box.set_margin_top(5)  # Closer to slot boxes
+        settings_box.set_margin_top(5)  # 更靠近料盘框
         
         for slot in range(4):
-            # Create container to center the smaller button
+            # 创建容器以居中较小的按钮
             settings_container = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
             settings_container.set_halign(Gtk.Align.CENTER)
             
             settings_btn = self._gtk.Button("settings", "", "color2")
-            settings_btn.set_size_request(36, 27)  # 10% smaller (was 40x30, now 36x27)
+            settings_btn.set_size_request(36, 27)  # 小10%（原40x30，现36x27）
             settings_btn.connect("clicked", self.show_slot_settings, slot)
-            settings_btn.set_tooltip_text(f"Configure Slot {slot}")
+            settings_btn.set_tooltip_text(f"配置料盘 {slot}")
             
             settings_container.pack_start(settings_btn, False, False, 0)
             settings_box.pack_start(settings_container, True, True, 0)
         
         main_box.pack_start(settings_box, False, False, 0)
         
-        # Bottom row - Refresh and Dryer buttons
+        # 底部行 - 刷新和干燥器按钮
         bottom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=20)
         bottom_box.set_homogeneous(True)
         
-        # Refresh button
-        refresh_btn = self._gtk.Button("refresh", "Refresh Spool Data", "color3")
+        # 刷新按钮
+        refresh_btn = self._gtk.Button("refresh", "刷新耗材数据", "color3")
         refresh_btn.set_size_request(-1, 50)
         refresh_btn.connect("clicked", self.refresh_status)
         bottom_box.pack_start(refresh_btn, True, True, 0)
         
-        # Dryer toggle button
-        self.dryer_btn = self._gtk.Button("heat-up", "Start Dryer", "color2")
+        # 干燥器切换按钮
+        self.dryer_btn = self._gtk.Button("heat-up", "启动干燥器", "color2")
         self.dryer_btn.set_size_request(-1, 50)
         self.dryer_btn.connect("clicked", self.toggle_dryer_btn)
         bottom_box.pack_start(self.dryer_btn, True, True, 0)
@@ -1090,31 +1090,31 @@ class Panel(ScreenPanel):
         self.content.add(main_box)
         self.content.show_all()
         
-        # Update status
+        # 更新状态
         self.update_status()
     
     def show_slot_dialog(self, slot):
-        """Create ultra-compact dialog for slot settings"""
-        # Ultra-minimal dialog box
-        dialog_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)  # Tiny spacing
-        dialog_box.set_margin_left(5)   # Minimal margins
+        """为料盘设置创建超紧凑对话框"""
+        # 超简约对话框框
+        dialog_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=3)  # 极小间距
+        dialog_box.set_margin_left(5)   # 最小边距
         dialog_box.set_margin_right(5)
         dialog_box.set_margin_top(3)
         dialog_box.set_margin_bottom(3)
         
-        # Store current values
+        # 存储当前值
         self.dialog_material = "PLA"
         self.dialog_color = [255, 255, 255]
         self.dialog_temp = 200
         
-        # Material row - ultra compact
+        # 材料行 - 超紧凑
         material_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
-        material_label = Gtk.Label(label="Mat:")  # Shortened label
-        material_label.set_size_request(35, -1)  # Smaller width
+        material_label = Gtk.Label(label="材料:")  # 缩短标签
+        material_label.set_size_request(35, -1)  # 更小宽度
         material_row.pack_start(material_label, False, False, 0)
         
         type_combo = Gtk.ComboBoxText()
-        materials = ["PLA", "ABS", "PETG", "TPU", "ASA"]  # Removed "Other"
+        materials = ["PLA", "ABS", "PETG", "TPU", "ASA"]  # 移除了"其他"
         for material in materials:
             type_combo.append_text(material)
         type_combo.set_active(0)
@@ -1122,164 +1122,164 @@ class Panel(ScreenPanel):
         material_row.pack_start(type_combo, True, True, 0)
         dialog_box.pack_start(material_row, False, False, 0)
         
-        # Color and Temperature in one row to save space
+        # 颜色和温度在一行以节省空间
         color_temp_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=5)
         
-        # Color section
-        color_label = Gtk.Label(label="Col:")
+        # 颜色部分
+        color_label = Gtk.Label(label="颜色:")
         color_label.set_size_request(35, -1)
         color_temp_row.pack_start(color_label, False, False, 0)
         
-        # Tiny color preview
+        # 微小颜色预览
         self.dialog_color_preview = Gtk.EventBox()
         self.dialog_color_preview.get_style_context().add_class("ace_color_preview")
-        self.dialog_color_preview.set_size_request(20, 15)  # Very small
+        self.dialog_color_preview.set_size_request(20, 15)  # 非常小
         self.set_color_preview(self.dialog_color_preview, self.dialog_color)
         color_temp_row.pack_start(self.dialog_color_preview, False, False, 0)
         
-        # Color picker button - compact
-        color_btn = self._gtk.Button("", "Edit", "color1")
-        color_btn.set_size_request(50, -1)  # Fixed small width
+        # 颜色选择器按钮 - 紧凑
+        color_btn = self._gtk.Button("", "编辑", "color1")
+        color_btn.set_size_request(50, -1)  # 固定小宽度
         color_btn.connect("clicked", self.on_color_clicked)
         color_temp_row.pack_start(color_btn, False, False, 0)
         
-        # Temperature section in same row
-        temp_label = Gtk.Label(label="T:")
+        # 温度部分在同一行
+        temp_label = Gtk.Label(label="温度:")
         color_temp_row.pack_start(temp_label, False, False, 0)
         
-        temp_btn = self._gtk.Button("", f"{self.dialog_temp}°", "color1")  # Removed "C"
-        temp_btn.set_size_request(50, -1)  # Fixed small width
+        temp_btn = self._gtk.Button("", f"{self.dialog_temp}°", "color1")  # 移除了"C"
+        temp_btn.set_size_request(50, -1)  # 固定小宽度
         temp_btn.connect("clicked", self.on_temp_clicked)
         color_temp_row.pack_start(temp_btn, False, False, 0)
         
         dialog_box.pack_start(color_temp_row, False, False, 0)
         
-        # Store references for updating
+        # 存储引用用于更新
         self.dialog_color_button = color_btn
         self.dialog_temp_button = temp_btn
         
-        # Empty slot option - compact
-        empty_check = Gtk.CheckButton(label="Mark empty")  # Shortened label
+        # 空料盘选项 - 紧凑
+        empty_check = Gtk.CheckButton(label="标记为空")  # 缩短标签
         dialog_box.pack_start(empty_check, False, False, 0)
         
-        # Store reference for checking
+        # 存储引用用于检查
         self.dialog_empty_check = empty_check
         
         buttons = [
-            {"name": "Cancel", "response": Gtk.ResponseType.CANCEL},
-            {"name": "Apply", "response": Gtk.ResponseType.OK}
+            {"name": "取消", "response": Gtk.ResponseType.CANCEL},
+            {"name": "应用", "response": Gtk.ResponseType.OK}
         ]
         
         def slot_response(dialog, response_id):
-            logging.info(f"ACE: Settings dialog response: {response_id}")
+            logging.info(f"ACE: 设置对话框响应: {response_id}")
             try:
                 if response_id == Gtk.ResponseType.OK:
                     if self.dialog_empty_check.get_active():
-                        # Use ACE_SET_SLOT to mark as empty
+                        # 使用 ACE_SET_SLOT 标记为空
                         self._screen._ws.klippy.gcode_script(f"ACE_SET_SLOT INDEX={slot} EMPTY=1")
-                        self._screen.show_popup_message(f"Slot {slot} marked as empty", 1)
+                        self._screen.show_popup_message(f"料盘 {slot} 标记为空", 1)
                     else:
                         material = self.dialog_material
                         color = f"{self.dialog_color[0]},{self.dialog_color[1]},{self.dialog_color[2]}"
                         temp = self.dialog_temp
                         
                         try:
-                            # Validate values
+                            # 验证值
                             if temp < 0 or temp > 300:
-                                raise ValueError("Temperature must be between 0-300°C")
+                                raise ValueError("温度必须在 0-300°C 之间")
                             
-                            # Use ACE_SET_SLOT to update slot data
+                            # 使用 ACE_SET_SLOT 更新料盘数据
                             cmd = f"ACE_SET_SLOT INDEX={slot} COLOR={color} MATERIAL={material} TEMP={temp}"
                             self._screen._ws.klippy.gcode_script(cmd)
                             
-                            self._screen.show_popup_message(f"Slot {slot} configured: {material} {temp}°C", 1)
+                            self._screen.show_popup_message(f"料盘 {slot} 已配置: {material} {temp}°C", 1)
                             
-                            # Refresh data after setting to get updated info
+                            # 设置后刷新数据以获取更新信息
                             self._screen._ws.klippy.gcode_script("ACE_QUERY_SLOTS")
                             
                         except ValueError as e:
-                            self._screen.show_popup_message(f"Error: {e}")
+                            self._screen.show_popup_message(f"错误: {e}")
                 else:
-                    logging.info("ACE: Settings dialog cancelled")
+                    logging.info("ACE: 设置对话框已取消")
             except Exception as e:
-                logging.error(f"ACE: Error in slot_response: {e}")
+                logging.error(f"ACE: slot_response 中的错误: {e}")
             finally:
-                # Ensure dialog cleanup
+                # 确保对话框清理
                 if hasattr(self._gtk, 'remove_dialog') and dialog:
                     self._gtk.remove_dialog(dialog)
-                    logging.info("ACE: Settings dialog closed")
+                    logging.info("ACE: 设置对话框已关闭")
         
-        self._gtk.Dialog(f"Slot {slot} Settings", buttons, dialog_box, slot_response)
+        self._gtk.Dialog(f"料盘 {slot} 设置", buttons, dialog_box, slot_response)
     
     def on_material_changed(self, combo):
-        """Handle material combo change"""
+        """处理材料组合框更改"""
         self.dialog_material = combo.get_active_text()
     
     def on_color_clicked(self, widget):
-        """Handle color picker button click"""
+        """处理颜色选择器按钮点击"""
         def color_callback(rgb_values):
-            logging.info(f"ACE: Color callback received: {rgb_values}")
+            logging.info(f"ACE: 颜色回调接收: {rgb_values}")
             self.dialog_color = rgb_values
-            self.dialog_color_button.set_label("Edit")  # Keep consistent label
+            self.dialog_color_button.set_label("编辑")  # 保持一致的标签
             self.set_color_preview(self.dialog_color_preview, rgb_values)
         
-        self.show_color_picker("Choose Color", self.dialog_color, color_callback)
+        self.show_color_picker("选择颜色", self.dialog_color, color_callback)
     
     def on_temp_clicked(self, widget):
-        """Handle temperature button click"""
+        """处理温度按钮点击"""
         def temp_callback(value):
             self.dialog_temp = value
             self.dialog_temp_button.set_label(f"{value}°")
         
-        # Use a simple number entry approach that works within dialogs
-        self.show_number_input("Set Temperature", "Enter temperature (0-300°C):", 
+        # 使用在对话框内有效的简单数字输入方法
+        self.show_number_input("设置温度", "输入温度 (0-300°C):", 
                               self.dialog_temp, 0, 300, temp_callback)
     
     def toggle_dryer_btn(self, widget):
-        """Toggle dryer on/off"""
+        """切换干燥器开/关"""
         if self.dryer_enabled:
-            # Stop dryer
+            # 停止干燥器
             self._screen._ws.klippy.gcode_script("ACE_STOP_DRYING")
-            self.dryer_btn.set_label("Start Dryer")
+            self.dryer_btn.set_label("启动干燥器")
             self.dryer_btn.get_style_context().remove_class("color4")
             self.dryer_btn.get_style_context().add_class("color2")
             self.dryer_enabled = False
-            self._screen.show_popup_message("Dryer stopped", 1)
+            self._screen.show_popup_message("干燥器已停止", 1)
         else:
-            # Start dryer - show temperature dialog
+            # 启动干燥器 - 显示温度对话框
             self.show_dryer_dialog()
     
     def show_dryer_dialog(self):
-        """Show dialog to set dryer temperature"""
+        """显示设置干燥器温度的对话框"""
         def dryer_callback(value):
-            # Start dryer
+            # 启动干燥器
             self._screen._ws.klippy.gcode_script(f"ACE_START_DRYING TEMP={value} DURATION=240")
-            self.dryer_btn.set_label("Stop Dryer")
+            self.dryer_btn.set_label("停止干燥器")
             self.dryer_btn.get_style_context().remove_class("color2")
             self.dryer_btn.get_style_context().add_class("color4")
             self.dryer_enabled = True
-            self._screen.show_popup_message(f"Dryer started at {value}°C", 1)
+            self._screen.show_popup_message(f"干燥器已在 {value}°C 启动", 1)
         
-        self.show_number_input("Start Dryer", "Enter dryer temperature:", 45, 35, 55, dryer_callback)
+        self.show_number_input("启动干燥器", "输入干燥器温度:", 45, 35, 55, dryer_callback)
     
     def update_status(self):
-        """Update ACE status and slot information"""
-        # Query ACE data
+        """更新 ACE 状态和料盘信息"""
+        # 查询 ACE 数据
         self._screen._ws.klippy.gcode_script("ACE_QUERY_SLOTS")
         
-        # Query current loaded index
+        # 查询当前加载索引
         self._screen._ws.klippy.gcode_script("ACE_GET_CURRENT_INDEX")
         
-        # Query endless spool status
+        # 查询自动续料状态
         self._screen._ws.klippy.gcode_script("ACE_ENDLESS_SPOOL_STATUS")
         
-        # Update loaded states
+        # 更新加载状态
         self.update_slot_loaded_states()
     
     def process_update(self, action, data):
-        """Process updates from Klipper"""
+        """处理来自 Klipper 的更新"""
         if action == "notify_status_update":
-            # Check for saved_variables updates
+            # 检查 saved_variables 更新
             if "saved_variables" in data:
                 save_vars = data["saved_variables"]
                 
@@ -1287,94 +1287,94 @@ class Panel(ScreenPanel):
                     variables = save_vars["variables"]
                     if "ace_current_index" in variables:
                         new_value = int(variables["ace_current_index"])
-                        logging.info(f"ACE: ace_current_index updated to: {new_value}")
+                        logging.info(f"ACE: ace_current_index 更新为: {new_value}")
                         if new_value != self.current_loaded_slot:
                             self.current_loaded_slot = new_value
                             self.update_slot_loaded_states()
         
         if action == "notify_gcode_response":
-            # Parse different types of ACE responses
+            # 解析不同类型的 ACE 响应
             response_str = str(data).strip()
-            logging.info(f"ACE: Received gcode response: {response_str}")
+            logging.info(f"ACE: 收到 gcode 响应: {response_str}")
             
-            # Look for ACE_QUERY_SLOTS response - starts with "// [" 
+            # 查找 ACE_QUERY_SLOTS 响应 - 以 "// [" 开头
             if response_str.startswith("// [") and response_str.endswith("]"):
                 try:
-                    # Remove the "// " prefix and parse JSON
-                    json_str = response_str[3:].strip()  # Remove "// " prefix
+                    # 移除 "// " 前缀并解析 JSON
+                    json_str = response_str[3:].strip()  # 移除 "// " 前缀
                     slot_data = json.loads(json_str)
                     if isinstance(slot_data, list) and len(slot_data) > 0:
-                        logging.info(f"ACE: Parsed slot data from ACE_QUERY_SLOTS: {slot_data}")
+                        logging.info(f"ACE: 从 ACE_QUERY_SLOTS 解析料盘数据: {slot_data}")
                         self.update_slots_from_data(slot_data)
                 except json.JSONDecodeError as e:
-                    logging.error(f"ACE: JSON decode error: {e}")
+                    logging.error(f"ACE: JSON 解码错误: {e}")
             
-            # Look for ACE_GET_CURRENT_INDEX response - simple format like "// 0" or "// -1"
+            # 查找 ACE_GET_CURRENT_INDEX 响应 - 简单格式如 "// 0" 或 "// -1"
             elif response_str.startswith("// ") and response_str[3:].strip().lstrip('-').isdigit():
                 try:
-                    # Extract index number from response like "// 0", "// 2", or "// -1"
+                    # 从响应中提取索引号，如 "// 0", "// 2", 或 "// -1"
                     current_index = int(response_str[3:].strip())
-                    logging.info(f"ACE: Got current index from ACE_GET_CURRENT_INDEX: {current_index}")
+                    logging.info(f"ACE: 从 ACE_GET_CURRENT_INDEX 获取当前索引: {current_index}")
                     if current_index != self.current_loaded_slot:
                         self.current_loaded_slot = current_index
                         self.update_slot_loaded_states()
                 except (ValueError, IndexError) as e:
-                    logging.error(f"ACE: Error parsing ACE_GET_CURRENT_INDEX response '{response_str}': {e}")
+                    logging.error(f"ACE: 解析 ACE_GET_CURRENT_INDEX 响应 '{response_str}' 错误: {e}")
             
-            # Look for endless spool status responses - check for "Currently enabled" line with // prefix
+            # 查找自动续料状态响应 - 检查带 // 前缀的 "Currently enabled" 行
             elif response_str.startswith("// - Currently enabled:"):
                 if "Currently enabled: True" in response_str:
                     self.endless_spool_enabled = True
                     self.endless_spool_switch.set_active(True)
-                    logging.info("ACE: Endless spool currently enabled")
+                    logging.info("ACE: 自动续料当前已启用")
                 elif "Currently enabled: False" in response_str:
                     self.endless_spool_enabled = False
                     self.endless_spool_switch.set_active(False)
-                    logging.info("ACE: Endless spool currently disabled")
+                    logging.info("ACE: 自动续料当前已禁用")
             
-            # Look for ACE command responses that might indicate tool changes
+            # 查找可能指示工具更改的 ACE 命令响应
             elif "ACE:" in response_str:
-                logging.info(f"ACE: Command response: {response_str}")
+                logging.info(f"ACE: 命令响应: {response_str}")
                 
-                # Look for tool change confirmations
+                # 查找工具更改确认
                 if "tool" in response_str.lower() and any(word in response_str.lower() for word in ["loaded", "changed", "active"]):
                     try:
-                        # Try to extract slot number from response
+                        # 尝试从响应中提取料盘号
                         import re
                         match = re.search(r'(\d+)', response_str)
                         if match:
                             new_slot = int(match.group(1))
                             if 0 <= new_slot <= 3:
-                                logging.info(f"ACE: Tool change detected, updating to slot {new_slot}")
+                                logging.info(f"ACE: 检测到工具更改，更新到料盘 {new_slot}")
                                 self.current_loaded_slot = new_slot
                                 self.update_slot_loaded_states()
                     except Exception as e:
-                        logging.error(f"ACE: Error parsing tool change response: {e}")
+                        logging.error(f"ACE: 解析工具更改响应错误: {e}")
     
     def update_slots_from_data(self, slot_data):
-        """Update slot display from ACE_QUERY_SLOTS data"""
-        logging.info(f"ACE: Updating slots from ACE_QUERY_SLOTS data: {slot_data}")
+        """从 ACE_QUERY_SLOTS 数据更新料盘显示"""
+        logging.info(f"ACE: 从 ACE_QUERY_SLOTS 数据更新料盘: {slot_data}")
         
         for i, slot in enumerate(slot_data):
-            if i < 4:  # Ensure we don't exceed our 4 slots
+            if i < 4:  # 确保不超过我们的4个料盘
                 if slot.get('status') == 'ready':
                     material = slot.get('material', 'PLA')
                     temp = slot.get('temp', 200)
                     color = slot.get('color', [255, 255, 255])
                     
-                    # Store the actual slot data
+                    # 存储实际料盘数据
                     self.slot_data[i] = {
                         "material": material,
-                        "color": color[:],  # Copy the color array
+                        "color": color[:],  # 复制颜色数组
                         "temp": temp,
                         "status": "ready"
                     }
                     
                     self.slot_labels[i].set_text(f"{material} {temp}°C")
                     self.set_slot_color(self.slot_color_boxes[i], color)
-                    logging.info(f"ACE: Updated slot {i}: {material} {temp}°C, color: {color}")
+                    logging.info(f"ACE: 更新料盘 {i}: {material} {temp}°C, 颜色: {color}")
                 else:
-                    # Store empty slot data
+                    # 存储空料盘数据
                     self.slot_data[i] = {
                         "material": "PLA",
                         "color": [255, 255, 255],
@@ -1382,9 +1382,9 @@ class Panel(ScreenPanel):
                         "status": "empty"
                     }
                     
-                    self.slot_labels[i].set_text("Empty")
+                    self.slot_labels[i].set_text("空")
                     self.set_slot_color(self.slot_color_boxes[i], [0, 0, 0])
-                    logging.info(f"ACE: Slot {i} marked as empty")
+                    logging.info(f"ACE: 料盘 {i} 标记为空")
         
-        # Update loaded states after updating slot data
+        # 更新料盘数据后更新加载状态
         self.update_slot_loaded_states()
